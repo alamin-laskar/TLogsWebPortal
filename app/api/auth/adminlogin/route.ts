@@ -1,11 +1,24 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_URL ||
+  process.env.NEXT_SUPABASE_PROJECT_URL ||
+  '';
+
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISH_KEY ||
+  process.env.NEXT_SUPABASE_PUBLISH_KEY ||
+  '';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { email, password } = body;
 
-    // 1. Validate that both fields were provided
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
@@ -13,42 +26,50 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Fetch the credentials from the environment variables
-    const adminEmail = process.env.TLOGS_ADMIN_EMAIL;
-    const adminPassword = process.env.TLOGS_ADMIN_PASSWORD;
-
-    // 3. Verify the environment variables are actually set to prevent accidental lockouts/bypasses
-    if (!adminEmail || !adminPassword) {
-      console.error('Admin credentials are not set in the environment variables.');
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Supabase credentials are not configured.');
       return NextResponse.json(
         { error: 'Internal server configuration error' },
         { status: 500 }
       );
     }
 
-    // 4. Compare the provided credentials
-    if (email === adminEmail && password === adminPassword) {
-      
-      // SUCCESS: Here you would typically generate a JWT or set an HTTP-Only cookie.
-      // For this example, we return a success response and a mock token.
-      
-      return NextResponse.json(
-        { 
-          message: 'Login successful', 
-          // In a real app, replace this with an actual signed JWT
-          token: 'mock-admin-jwt-token-12345' 
+    const cookieStore = await cookies();
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
         },
-        { status: 200 }
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
+        },
+      },
+    });
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error || !data.session || !data.user) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
       );
     }
 
-    // 5. Credentials did not match
     return NextResponse.json(
-      { error: 'Invalid email or password' },
-      { status: 401 }
+      {
+        message: 'Login successful',
+        user: data.user,
+        session: data.session,
+      },
+      { status: 200 }
     );
-
   } catch (error) {
+    console.error('Admin login error:', error);
     return NextResponse.json(
       { error: 'Malformed request' },
       { status: 400 }

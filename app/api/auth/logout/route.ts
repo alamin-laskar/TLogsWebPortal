@@ -1,16 +1,39 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_URL ||
+  process.env.NEXT_SUPABASE_PROJECT_URL ||
+  '';
+
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISH_KEY ||
+  process.env.NEXT_SUPABASE_PUBLISH_KEY ||
+  '';
 
 export async function POST() {
   try {
     const cookieStore = await cookies();
-
-    // 1. Delete your custom auth cookie
-    // Change 'auth-token' to whatever name you used when setting the cookie during login
     cookieStore.delete('auth-token');
 
-    // Note: If you are using Supabase SSR cookies, you would delete their specific cookie name, e.g.:
-    // cookieStore.delete('sb-[YOUR_PROJECT_REF]-auth-token');
+    if (supabaseUrl && supabaseKey) {
+      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          },
+        },
+      });
+      await supabase.auth.signOut();
+    }
 
     return NextResponse.json(
       { message: 'Logged out successfully' },

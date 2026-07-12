@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import client from '@/utils/client';
+import { useAuth } from '@/components/context/AuthContext';
 import {
   Users,
   CreditCard,
@@ -14,7 +15,7 @@ import {
 
 const navItems = [
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'All Users', href: '/dashboard/users', icon: Users },
+  { name: 'All Users', href: '/dashboard/TLogsUsers', icon: Users },
   { name: 'Subs & Plans', href: '/dashboard/subscriptions', icon: CreditCard },
   { name: 'Push Notifications', href: '/dashboard/notifications', icon: Bell },
 ];
@@ -22,7 +23,11 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, profile, isLoading } = useAuth();
 
+  const displayName = profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Error: No Name';
+  const roleLabel = profile?.role || 'Error: No Role';
+  const emailLabel = profile?.email || user?.email || 'No email available';
   // Inside components/Sidebar.tsx
 
   const handleLogout = async () => {
@@ -50,9 +55,12 @@ export default function Sidebar() {
       {/* 1. Admin Profile Info on Top */}
       <div className="flex items-center p-6 border-b border-gray-100">
         <UserCircle2 className="w-10 h-10 text-gray-400" />
-        <div className="ml-3">
-          <p className="text-sm font-semibold text-gray-900">Admin User</p>
-          <p className="text-xs text-gray-500">admin@tlogs.com</p>
+        <div className="ml-3 min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">
+            {isLoading ? 'Loading...' : displayName}
+          </p>
+          <p className="text-sm text-gray-500">{roleLabel}</p>
+          <p className="truncate text-xs text-gray-400">{emailLabel}</p>
         </div>
       </div>
 

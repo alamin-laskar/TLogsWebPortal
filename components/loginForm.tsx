@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
-import client from '@/utils/client';
 
 export default function LoginForm() {
   const router = useRouter();
