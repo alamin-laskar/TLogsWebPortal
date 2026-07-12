@@ -1,69 +1,43 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_URL ||
-  process.env.NEXT_SUPABASE_PROJECT_URL ||
-  '';
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISH_KEY ||
-  process.env.NEXT_SUPABASE_PUBLISH_KEY ||
-  '';
+import { connectToDatabase } from '@/lib/mongodb';
+import { verifyJwt } from '@/lib/auth';
+import { AdminModel } from '@/models/admin';
 
 export async function GET() {
   try {
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json({ profile: null }, { status: 500 });
-    }
-
     const cookieStore = await cookies();
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
-          });
-        },
-      },
-    });
+    const token = cookieStore.get('admin-session')?.value;
 
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (error || !user?.email) {
-      return NextResponse.json({ profile: null }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ profile: null, user: null }, { status: 401 });
     }
 
-    const { data, error: profileError } = await supabase
-      .from('admin_Profile')
-      .select('name, role, email')
-      .eq('email', user.email)
-      .maybeSingle();
+    const payload = verifyJwt(token);
+    await connectToDatabase();
+    const admin = await AdminModel.findById(payload.sub).lean();
 
-    if (profileError) {
-      return NextResponse.json({ profile: null }, { status: 200 });
+    if (!admin) {
+      cookieStore.delete('admin-session');
+      return NextResponse.json({ profile: null, user: null }, { status: 401 });
     }
 
     return NextResponse.json({
-      profile: data
-        ? {
-            name: data.name ?? null,
-            role: data.role ?? null,
-            email: data.email ?? null,
-          }
-        : null,
+      profile: {
+        id: admin._id.toString(),
+        name: admin.name ?? null,
+        role: admin.role ?? null,
+        email: admin.email ?? null,
+      },
+      user: {
+        id: admin._id.toString(),
+        name: admin.name ?? null,
+        role: admin.role ?? null,
+        email: admin.email ?? null,
+      },
     });
   } catch (error) {
     console.error('Profile fetch error:', error);
-    return NextResponse.json({ profile: null }, { status: 500 });
+    return NextResponse.json({ profile: null, user: null }, { status: 500 });
   }
 }

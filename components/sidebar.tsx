@@ -1,9 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import client from '@/utils/client';
 import { useAuth } from '@/components/context/AuthContext';
 import {
   Users,
@@ -26,24 +24,19 @@ export default function Sidebar() {
   const router = useRouter();
   const { user, profile, isLoading } = useAuth();
 
-  const displayName = profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Error: No Name';
-  const roleLabel = profile?.role || 'Error: No Role';
+  const displayName = profile?.name || user?.name || user?.email?.split('@')[0] || 'Error: No Name';
+  const roleLabel = profile?.role || user?.role || 'Error: No Role';
   const emailLabel = profile?.email || user?.email || 'No email available';
 
   const handleLogout = async () => {
     try {
-      // 1. Call your custom backend logout route to clear HTTP-only cookies
       await fetch('/api/auth/logout', {
         method: 'POST',
+        credentials: 'include',
       });
-
-      // 2. Clear the Supabase client session (if you are still using the client SDK)
-      await client.auth.signOut();
-
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
-      // 3. Force a router refresh to clear Server Component cache, then redirect
       router.refresh();
       router.push('/');
     }
@@ -59,8 +52,8 @@ export default function Sidebar() {
           <p className="truncate text-sm font-semibold text-gray-900">
             {isLoading ? 'Loading...' : displayName}
           </p>
-          <p className="text-sm text-gray-500">{roleLabel}</p>
-          <p className="truncate text-xs text-gray-400">{emailLabel}</p>
+          <p className="text-sm text-red-500 uppercase">{roleLabel}</p>
+          <p className="truncate text-xs text-blue-500">{emailLabel}</p>
         </div>
       </div>
 

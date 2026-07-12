@@ -3,58 +3,51 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
-import client from '@/utils/client';
+import { useToast } from '@/components/context/ToastContext';
 
 export default function LoginForm() {
   const router = useRouter();
+  const { addToast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-const handleLogin = async (formData: FormData) => {
-  setIsPending(true);
-  setError(null);
+  const handleLogin = async (formData: FormData) => {
+    setIsPending(true);
+    setError(null);
 
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
-  try {
-    const response = await fetch('/api/auth/adminlogin', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      setError(data.error || 'Failed to sign in');
-      setIsPending(false);
-      return;
-    }
-
-    if (data.session?.access_token && data.session?.refresh_token) {
-      const { error: sessionError } = await client.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
+    try {
+      const response = await fetch('/api/auth/adminlogin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (sessionError) {
-        setError('Failed to initialize your session. Please try again.');
+      const data = await response.json();
+
+      if (!response.ok) {
+        const message = data.error || 'Failed to sign in';
+        setError(message);
+        addToast(message, 'error');
         setIsPending(false);
         return;
       }
-    }
 
-    router.refresh();
-    router.push('/dashboard');
-  } catch {
-    setError('A network error occurred. Please try again.');
-    setIsPending(false);
-  }
-};
+      addToast('Login successful', 'success');
+      router.refresh();
+      router.push('/dashboard');
+    } catch {
+      const message = 'A network error occurred. Please try again.';
+      setError(message);
+      addToast(message, 'error');
+      setIsPending(false);
+    }
+  };
   return (
     <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md border border-gray-100">
       <div className="text-center">

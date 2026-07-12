@@ -4,7 +4,7 @@ import { useAuth } from '@/components/context/AuthContext';
 import LoginForm from '@/components/loginForm';
 
 export default function HomePage() {
-  const { user, isLoading } = useAuth();
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (

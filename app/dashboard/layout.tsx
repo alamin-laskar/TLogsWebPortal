@@ -1,46 +1,20 @@
 import { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
 import Sidebar from '@/components/sidebar';
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  process.env.NEXT_PUBLIC_SUPABASE_PROJECT_URL ||
-  process.env.NEXT_SUPABASE_PROJECT_URL ||
-  '';
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISH_KEY ||
-  process.env.NEXT_SUPABASE_PUBLISH_KEY ||
-  '';
+import { verifyJwt } from '@/lib/auth';
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  if (!supabaseUrl || !supabaseKey) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('admin-session')?.value;
+
+  if (!token) {
     redirect('/');
   }
 
-  const cookieStore = await cookies();
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
-        });
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
+  try {
+    verifyJwt(token);
+  } catch {
     redirect('/');
   }
 

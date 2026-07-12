@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import {AuthProvider} from "@/components/context/AuthContext";
+import { ToastProvider } from "@/components/context/ToastContext";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
         <AuthProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
