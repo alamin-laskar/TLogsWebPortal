@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import client from '@/utils/client';
@@ -28,7 +29,6 @@ export default function Sidebar() {
   const displayName = profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Error: No Name';
   const roleLabel = profile?.role || 'Error: No Role';
   const emailLabel = profile?.email || user?.email || 'No email available';
-  // Inside components/Sidebar.tsx
 
   const handleLogout = async () => {
     try {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
+import client from '@/utils/client';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -32,6 +33,19 @@ const handleLogin = async (formData: FormData) => {
       setError(data.error || 'Failed to sign in');
       setIsPending(false);
       return;
+    }
+
+    if (data.session?.access_token && data.session?.refresh_token) {
+      const { error: sessionError } = await client.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+
+      if (sessionError) {
+        setError('Failed to initialize your session. Please try again.');
+        setIsPending(false);
+        return;
+      }
     }
 
     router.refresh();
